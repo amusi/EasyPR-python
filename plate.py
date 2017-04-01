@@ -1,22 +1,27 @@
 import cv2
+import traceback
 
 from core.plate_locate import PlateLocate
+from util.figs import imshow
 
 def test_plate_locate():
     print("Testing Plate Locate")
+    #try:
     file = "resources/image/test.jpg"
 
     src = cv2.imread(file)
+
     result = []
     plate = PlateLocate()
-    plate.setDebug(1)
+    plate.setDebug(False)
     plate.setLifemode(True)
 
     if plate.plateLocate(src, result) == 0:
         for res in result:
-            cv2.imshow("plate locate", res)
-            cv2.waitKey(0)
-        cv2.destroyWindow("plate locate")
+            imshow("plate locate", res)
+
+    #except:
+     #   traceback.print_exc()
 
 
 def test_plate_judge():

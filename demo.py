@@ -32,24 +32,24 @@ accuary_menu = (
 )
 
 def command_line_handler():
-    try:
-        while(1):
-            print(main_menu)
-            select = input()
-            main_op[select]()
+    #try:
+    while(1):
+        print(main_menu)
+        select = input()
+        main_op[select]()
 
-    except Exception as e:
-        print("Exit")
+    #except Exception as e:
+    #   print("Exit")
 
 def test_main():
-    try:
-        while(1):
-            print(test_menu)
-            select = input()
-            test_op[select]()
+    #try:
+    while(1):
+        print(test_menu)
+        select = input()
+        test_op[select]()
 
-    except Exception as e:
-        print("Exit")
+    #except Exception as e:
+    #    print("Exit")
 
 
 def test_accuary():
