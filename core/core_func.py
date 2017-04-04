@@ -5,22 +5,14 @@ from enum import Enum
 
 Color = Enum('Color', ('BLUE', 'YELLOW', 'WHITE', 'UNKNOW'))
 
-def debug_show(src, gray=False):
-    plt.figure()
-    if gray:
-        plt.imshow(src, cmap='gray')
-    else:
-        plt.imshow(src)
-
-
 def clearLiuDingOnly(img):
-    x = 7
+    x = 7#default 7 char
     jump = np.zeros((img.shape[0]))
 
     for i in range(img.shape[0]):
         jumpCnt = 0
         whiteCnt = 0
-        for j in range(img.shape[1]):
+        for j in range(img.shape[1] - 1):
             if img[i][j] != img[i][j + 1]:
                 jumpCnt += 1
             if img[i][j] == 255:
@@ -34,26 +26,54 @@ def clearLiuDingOnly(img):
 
 
 def getPlateType(src, adaptive_minsv):
-    max_percent = 0
-    max_color = "UNKNOW"
-    blue_per = 0
-    yellow_per = 0
-    white_per = 0
-
     blue_per, flag = plateColorJudge(src, 'BLUE', adaptive_minsv)
     if flag:
-        return 'BLUE'
+        return Color.BLUE
     yellow_per, flag = plateColorJudge(src, 'YELLOW', adaptive_minsv)
     if flag:
-        return 'YELLOW'
+        return Color.YELLOW
     white_per, flag = plateColorJudge(src, 'WHITE', adaptive_minsv)
     if flag:
-        return 'WHITE'
+        return Color.WHITE
     tmp = np.array([blue_per, yellow_per, white_per])
 
-    tmp_color = ['BLUE', 'YELLOW', 'WHITE']
+    tmp_color = [Color.BLUE, Color.YELLOW, Color.WHITE]
     return tmp_color[tmp.argmax()]
 
+def clearLiuDingChar(img):
+    x = 7
+    jump = np.zeros((img.shape[0]))
+    fjump = []
+    whiteCnt = 0
+
+    for i in range(img.shape[0]):
+        jumpCnt = 0
+
+        for j in range(img.shape[1] - 1):
+            if img[i][j] != img[i][j + 1]:
+                jumpCnt += 1
+            if img[i][j] == 255:
+                whiteCnt += 1
+        jump[i] = jumpCnt
+
+    icount = 0
+    for i in range(img.shape[0]):
+        fjump.append(jump[i])
+        if jump[i] >= 16 and jump[i] <= 45:
+            icount += 1
+
+    if icount / img.shape[0] <= 0.4:
+        return False
+
+    if whiteCnt / (img.shape[0] * img.shape[1]) < 0.15 or whiteCnt / (img.shape[0] * img.shape[1]) > 0.5:
+        return False
+
+    for i in range(img.shape[0]):
+        if jump[i] <= x:
+            for j in range(img.shape[1]):
+                img[i, j] = 0
+
+    return True
 
 def clearLiuDing(mask, top, bottom):
     x = 7
@@ -235,6 +255,8 @@ def colorMatch(src, r, adaptive_minsv):
 def bFindLeftRightBound(bound_threshold):
     span = bound_threshold.shape[0] * 0.2
 
+    posLeft = 0
+    posRight = 0
     for i in range(0, bound_threshold.shape[1] - int(span) - 1, 2):
         whiteCnt = 0
         for k in range(bound_threshold.shape[0]):

@@ -42,11 +42,8 @@ class PlateLocate(object):
     def plateLocate(self, src, plates):
         all_result_plates = []
 
-        self.plateColorLocate(src, all_result_plates)
+        #self.plateColorLocate(src, all_result_plates)
         self.plateSobelLocate(src, all_result_plates)
-
-        print('debug')
-        print(all_result_plates)
 
         for it in all_result_plates:
             plates.append(it['mat'])
@@ -76,23 +73,21 @@ class PlateLocate(object):
                 itemRect[1] = itemRect[1] - itemRect[3] * 0.08
                 itemRect[3] = itemRect[3] * 1.16
                 bound_rects_part.append(itemRect)
-        # print(bound_rects_part)
 
         rects_sobel = []
         for i in range(len(bound_rects_part)):
             bound_rect = bound_rects_part[i]
-            print(bound_rect)
+
             refpoint = (bound_rect[0], bound_rect[1])
             x = int(bound_rect[0] if bound_rect[0] > 0 else 0)
             y = int(bound_rect[1] if bound_rect[1] > 0 else 0)
 
             width = int(bound_rect[2] if x + bound_rect[2] < src.shape[1] else src.shape[1] - x)
             height = int(bound_rect[3] if y + bound_rect[3] < src.shape[0] else src.shape[0] - y)
-            print(src.shape)
-            print(x, y, width, height)
+
             bound_mat = src[y: y + height, x: x + width, :]
 
-            self.sobelSecSearchPart(bound_mat, refpoint, rects_sobel)  # TODO  test
+            self.sobelSecSearchPart(bound_mat, refpoint, rects_sobel)
 
         for i in range(len(bound_rects)):
             bound_rect = bound_rects[i]
@@ -121,7 +116,7 @@ class PlateLocate(object):
         posLeft, posRight, flag = bFindLeftRightBound(tempBoundThread)
         if flag:
             if posRight != 0 and posLeft != 0 and posLeft < posRight:
-                posY = bound_threshold.shape[0] * 0.5
+                posY = int(bound_threshold.shape[0] * 0.5)
                 for i in range(posLeft + int(bound_threshold.shape[0] * 0.1), posRight - 4):
                     bound_threshold[posY, i] = 255
             for i in range(bound_threshold.shape[0]):
@@ -149,27 +144,28 @@ class PlateLocate(object):
         out_rects = []
 
         src_threshold = self.sobelOper(src, self.m_GaussianBlurSize, self.m_MorphSizeWidth, self.m_MorphSizeHeight)
-        # debug_show(src_threshold, gray=True)
         _, contours, _ = cv2.findContours(src_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        # src_copy = self.src.copy()
-        # cv2.drawContours(src_copy, contours, -1, (0,255,0), 2)
-        # debug_show(src_copy)
+        if self.m_debug:
+            src_copy = src.copy()
+            cv2.drawContours(src_copy, contours, -1, (0,255,0), 2)
+            imshow("fisrt_search", src_copy)
 
-        # src_copy_2 = self.src.copy()
-        #first_rects = []
+        src_copy_2 = src.copy()
         for it in contours:
             mr = cv2.minAreaRect(it)
-            # box = cv2.boxPoints(mr)
-            # box = np.int0(box)
+            if self.m_debug:
+                box = cv2.boxPoints(mr)
+                box = np.int0(box)
 
             if self.verifySizes(mr):
-                # cv2.drawContours(src_copy_2,[box],0,(0,0,255),2)
+                cv2.drawContours(src_copy_2,[box],0,(0,0,255),2)
                 safeBoundRect, flag = self.calcSafeRect(mr, src)
-                # print(flag)
                 if not flag:
                     continue
                 out_rects.append(safeBoundRect)
+        if self.m_debug:
+            imshow("first_serach_res", src_copy_2)
 
         return out_rects
 
@@ -257,7 +253,7 @@ class PlateLocate(object):
 
     def sobelOperT(self, img, blursize, morphW, morphH):
         '''
-            No different with sobelOperT
+            No different with sobelOper ? 
         '''
         blur = cv2.GaussianBlur(img, (blursize, blursize), 0, 0, cv2.BORDER_DEFAULT)
 
@@ -369,7 +365,7 @@ class PlateLocate(object):
         xiff = abs(slope) * height
         if slope > 0:
             plTri = np.float32([[0, 0], [width - xiff - 1, 0], [xiff, height - 1]])
-            dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff / 2, 0], [xiff / 2, height0 - 1]])
+            dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff / 2, 0], [xiff / 2, height - 1]])
         else:
             plTri = np.float32([[xiff, 0], [width - 1, 0], [0, height - 1]])
             dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff + xiff / 2, 0], [xiff / 2, height - 1]])

@@ -10,4 +10,6 @@ EasyPR-python
 
 ...
 Many things to do
+## Done
+- [x] plate segment
 
