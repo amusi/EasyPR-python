@@ -1,10 +1,13 @@
 from plate import *
+from train.cnn_train import main
 
 main_menu = (
     '-'*8 + '\n' +
     '选择测试:\n' +
     '1. 功能测试;\n' +
     '2. 准确度测试;(Invalid)\n' +
+    '3. SVM训练;(Invalid)\n' +
+    '4. CNN相关;\n' +
     '-'*8 + '\n'
 )
 
@@ -20,45 +23,65 @@ test_menu = (
     '7. test plate_recognize(车牌识别);\n' +
     '8. test all(测试全部);\n' +
     '9. 返回;\n' +
-    '-'*8 + '\n'
+    '-'*8
 )
 
 accuary_menu = (
     '-'*8 + '\n' +
-    '准确度测试:\n' +
-    '1. svm测试;\n' +
-    '2. ann测试;\n' +
-    '-'*8 + '\n'
+    '批量测试:\n' +
+    '1. 普通情况测试;\n' +
+    '2. 极端情况测试;\n' +
+    '-'*8
+)
+
+cnn_menu = (
+    '-'*8 + '\n' +
+    'cnn相关:\n' +
+    '1. cnn训练;\n' +
+    '2. cnn测试(单张);\n' +
+    '3. cnn测试(测试集);\n' +
+    '-'*8
 )
 
 def command_line_handler():
-    #try:
     while(1):
         print(main_menu)
         select = input()
         main_op[select]()
 
-    #except Exception as e:
-    #   print("Exit")
 
 def test_main():
-    #try:
     while(1):
         print(test_menu)
         select = input()
         test_op[select]()
 
-    #except Exception as e:
-    #    print("Exit")
 
 
 def test_accuary():
     print(accuary_menu)
     pass
 
+def svm_train():
+    pass
+
+def cnn_rel():
+    print(cnn_menu)
+    select = input()
+    if select == '1':
+        main()
+    elif select == '2':
+        test_cnn(label=0)
+    elif select == '3':
+        test_cnn_val()
+    else:
+        print("Error choice")
+
 main_op = {
     '1': test_main,
     '2': test_accuary,
+    '3': svm_train,
+    '4': cnn_rel
 }
 
 test_op = {

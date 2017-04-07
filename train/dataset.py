@@ -6,6 +6,8 @@ from queue import Queue
 from threading import Thread
 from six.moves import cPickle as pickle
 
+from util.figs import imshow
+
 class DataSet(object):
 
     def __init__(self, dataset_params):
@@ -23,7 +25,7 @@ class DataSet(object):
         with open(self.label_path, 'rb') as f:
             result = pickle.load(f)
 
-        self.record_list = result#{'name', 'label'}
+        self.record_list = result#{'name', 'label', 'subdir'}
         self.record_point = 0
         self.record_number = len(self.record_list)
 
@@ -44,10 +46,11 @@ class DataSet(object):
         while True:
             if self.record_point % self.record_number == 0:
                 random.shuffle(self.record_list)
-            self.record_point = 0
+                self.record_point = 0
 
-            self.record_queue.put([os.path.join(self.data_path, self.record_list[self.record_point]['name']),
-                               self.record_list[self.record_point]['label']])
+            self.record_queue.put([os.path.join(self.data_path, self.record_list[self.record_point]['subdir'],
+                                                self.record_list[self.record_point]['name']),
+                                                self.record_list[self.record_point]['label']])
             self.record_point += 1
 
     def record_process(self, record):
@@ -57,10 +60,8 @@ class DataSet(object):
           image: 3-D ndarray
           labels: 2-D list
         """
-        print(record[0])
-        image = cv2.imread(record[0])
-        assert(image.ndim == 1)
-
+        image = cv2.imdecode(np.fromfile(record[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)[..., None]
+        #image = cv2.imread(record[0], cv2.IMREAD_GRAYSCALE)[..., None]
         return [image, record[1]]
 
     def record_customer(self):
@@ -86,7 +87,24 @@ class DataSet(object):
             labels.append(label)
 
         images = np.asarray(images, dtype=np.float32)
-        #images = images/255 * 2 - 1
+        images = images / 255 * 2 - 1
 
         return images, labels
 
+if __name__ == "__main__":
+    #Test
+    batch_size = 32
+    dataset_params = {
+        'batch_size': batch_size,
+        'path': '../resources/train_data/chars',
+        'labels_path': '../resources/train_data/chars_list_train.pickle',
+        'thread_num': 1
+    }
+    train_dataset_reader = DataSet(dataset_params)
+    images, labels = train_dataset_reader.batch()
+    imshow('tmp', images[0])
+    imshow('tmp', images[1])
+
+    images, labels = train_dataset_reader.batch()
+    imshow('tmp', images[0])
+    imshow('tmp', images[1])

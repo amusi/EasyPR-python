@@ -1,12 +1,12 @@
 import tensorflow as tf
 
-from layer import *
-from dataset import DataSet
+from .layer import *
+from .dataset import DataSet
 
 import os
 import datetime
 import time
-from util.figs import imshow
+
 
 class Lenet(object):
     def __init__(self, params):
@@ -16,6 +16,9 @@ class Lenet(object):
         self.learning_rate = params['lr']
         self.max_steps = params['max_steps']
         self.log_dir = params['log_dir']
+        print("bs: {}, img_size: {}, prob: {}, lr: {}, max_steps: {}".format(
+            self.batch_size, self.image_size, self.prob, self.learning_rate, self.max_steps
+        ))
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -31,11 +34,9 @@ class Lenet(object):
         self.total_loss = None
 
         self.global_step = tf.Variable(0)
-        self.saver = None
+        self.saver = tf.train.Saver(max_to_keep=5)
 
         self.sess = None
-
-
 
     def compile(self):
         self.x = tf.placeholder(tf.float32, (self.batch_size, self.image_size, self.image_size, 1))
@@ -79,6 +80,9 @@ class Lenet(object):
 
         self.total_loss = self.loss + 5e-4 * regularizers
         self.pred = tf.argmax(logits, 1)
+        correct_pred = tf.equal(self.pred, self.y)
+        self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
         self.__add_optimal()
 
     def __add_optimal(self):
@@ -91,28 +95,34 @@ class Lenet(object):
         if self.sess is None:
             self.sess = tf.Session()
 
-        if self.saver is None:
-            self.saver = tf.train.Saver(max_to_keep=5)
-
         self.sess.run(tf.global_variables_initializer())
         train_writer = tf.summary.FileWriter(self.log_dir + "train/summary/", self.sess.graph)
         model_dir = self.log_dir + 'models/'
 
-        for step in range(self.max_steps):
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+
+        ckpt = tf.train.get_checkpoint_state(model_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+            print("Model restored...", ckpt.model_checkpoint_path)
+
+        for step in range(int(self.max_steps)):
 
             train_x, train_y = train_dataset.batch()
             feed_dict = {self.x: train_x, self.y: train_y, self.keep_prob: 0.5}
             self.sess.run(self.train_op, feed_dict=feed_dict)
 
             if step % 10 == 0:
-                train_loss = self.sess.run([self.loss], feed_dict=feed_dict)
-                print("Step: %d, Train_loss:%g" % (step, train_loss))
+                train_loss, acc = self.sess.run([self.loss, self.accuracy], feed_dict=feed_dict)
+                print("Step: %d, Train_loss: %g, acc: %g" % (step, train_loss, acc))
 
             if step % 100 == 0:
                 val_x, val_y = val_dataset.batch()
                 feed_dict = {self.x: val_x, self.y: val_y, self.keep_prob: 1}
-                valid_loss = self.sess.run([self.loss], feed_dict=feed_dict)
-                print("%s ---> Validation_loss: %g" % (datetime.datetime.now(), valid_loss))
+                valid_loss, acc = self.sess.run([self.loss, self.accuracy], feed_dict=feed_dict)
+                print("%s ---> Validation_loss: %g, acc: %g" % (datetime.datetime.now(), valid_loss, acc))
+
             if step % 5000 == 0:
                 print('Saving checkpoint: ', step)
                 self.saver.save(self.sess, model_dir + "model.ckpt", step)
@@ -120,13 +130,22 @@ class Lenet(object):
         train_writer.close()
 
     def predict(self, test_images):
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
-        model_dir = self.log_dir + 'models/'
-        ckpt = tf.train.get_checkpoint_state(model_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
-            print("Model restored...")
+
+        assert(test_images.ndim == 3 or test_images.ndim == 4)
+        if test_images.ndim == 3:
+            test_images = test_images[None]
+
+        assert(test_images.ndim == 4)
+
+        if self.sess is None:
+            self.sess = tf.Session()
+            self.sess.run(tf.global_variables_initializer())
+
+            model_dir = self.log_dir + 'models/'
+            ckpt = tf.train.get_checkpoint_state(model_dir)
+            if ckpt and ckpt.model_checkpoint_path:
+                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                print("Model restored...", ckpt.model_checkpoint_path)
 
         starttime = time.time()
         pred = self.sess.run(self.pred, feed_dict={self.x: test_images,
@@ -135,31 +154,32 @@ class Lenet(object):
         print('Predict done: time {:.4f} sec'.format(endtime - starttime))
         return pred, endtime - starttime
 
+    def close(self):
+        self.sess.close()
 
-if __name__ == "__main__":
-    batch_size = 64
+def main():
+    batch_size = 32
     dataset_params = {
         'batch_size': batch_size,
-        'path': '../resources/train_data/chars',
-        'labels_path': '../resources/train_data/chars_list_train.pickle',
-        'thread_num': 1
+        'path': 'resources/train_data/chars',
+        'labels_path': 'resources/train_data/chars_list_train.pickle',
+        'thread_num': 3
     }
     train_dataset_reader = DataSet(dataset_params)
-    images, labels = train_dataset_reader.batch()
-    print(images)
-    imshow('tmp', images[0])
-    #dataset_params['labels_path'] = '../resources/train_data/chars_list_val.pickle'
-    #val_dataset_reader = DataSet(dataset_params)
-    '''
+    dataset_params['labels_path'] = 'resources/train_data/chars_list_val.pickle'
+    #dataset_params['batch_size'] = -1
+    val_dataset_reader = DataSet(dataset_params)
+
     params = {
         'image_size': 20,
         'batch_size': batch_size,
         'prob': 0.5,
         'lr': 0.01,
-        'max_steps': 1e4,
-        'log_dir': 'model/chars/'
+        'max_steps': train_dataset_reader.num_batch_per_epoch * 20,
+        'log_dir': 'train/model/chars/'
     }
+
     model = Lenet(params)
     model.compile()
     model.train(train_dataset_reader, val_dataset_reader)
-    '''
+

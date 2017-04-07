@@ -18,7 +18,7 @@ for label in labels:
         index2str[cnt] = province_mapping[label]
 
     for name in os.listdir('chars/' + label):
-        record = {'name': name, 'label': cnt}
+        record = {'name': name, 'label': cnt, 'subdir': label }
         total_list.append(record)
     cnt += 1
 random.shuffle(total_list)

@@ -42,8 +42,8 @@ class PlateLocate(object):
     def plateLocate(self, src, plates):
         all_result_plates = []
 
-        #self.plateColorLocate(src, all_result_plates)
-        self.plateSobelLocate(src, all_result_plates)
+        self.plateColorLocate(src, all_result_plates)
+        #self.plateSobelLocate(src, all_result_plates)
 
         for it in all_result_plates:
             plates.append(it['mat'])
@@ -154,12 +154,13 @@ class PlateLocate(object):
         src_copy_2 = src.copy()
         for it in contours:
             mr = cv2.minAreaRect(it)
-            if self.m_debug:
-                box = cv2.boxPoints(mr)
-                box = np.int0(box)
+
 
             if self.verifySizes(mr):
-                cv2.drawContours(src_copy_2,[box],0,(0,0,255),2)
+                if self.m_debug:
+                    box = cv2.boxPoints(mr)
+                    box = np.int0(box)
+                    cv2.drawContours(src_copy_2,[box],0,(0,0,255),2)
                 safeBoundRect, flag = self.calcSafeRect(mr, src)
                 if not flag:
                     continue
@@ -442,7 +443,7 @@ class PlateLocate(object):
         print("Doing Color Locate")
         src_b = self.colorSearch(src, Color.BLUE, rects_blue)
         self.deskew(src, src_b, rects_blue, cand)
-
+        print(len(rects_blue))
         src_b = self.colorSearch(src, Color.YELLOW, rects_yellow)
         self.deskew(src, src_b, rects_yellow, cand)
         print("Color Locate Done")
