@@ -1,5 +1,5 @@
 # EasyPR-python
-EasyPR-python
+EasyPR-python by fh
 ## Requirements
 * python 3.5
 * opencv 3.1
@@ -11,11 +11,12 @@ EasyPR-python
 ### easy-python
 
 ## TODO
-- [x] plate locate
-- [x] plate judge
-
+- [ ] plate judge
+- [ ] char identify ( cnn done, low accuracy)
 ...
 Many things to do
+
 ## Done
+- [x] plate locate ( need test )
 - [x] plate segment
 

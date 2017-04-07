@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from .core_func import *
+from .base import Plate
 from util.figs import imwrite, imshow
 
 class PlateLocate(object):
@@ -43,14 +44,14 @@ class PlateLocate(object):
         all_result_plates = []
 
         self.plateColorLocate(src, all_result_plates)
-        #self.plateSobelLocate(src, all_result_plates)
-
+        self.plateSobelLocate(src, all_result_plates)
+        #print(len(all_result_plates))
         for it in all_result_plates:
-            plates.append(it['mat'])
+            plates.append(it.plate_image)
 
         return 0
 
-    def plateSobelLocate(self, src, cand_plates):
+    def plateSobelLocate(self, src, cand_plates, index=0):
         print("Doing Sobel Locate")
         bound_rects = self.sobelFrtSearch(src)
         bound_rects_part = []
@@ -73,7 +74,7 @@ class PlateLocate(object):
                 itemRect[1] = itemRect[1] - itemRect[3] * 0.08
                 itemRect[3] = itemRect[3] * 1.16
                 bound_rects_part.append(itemRect)
-
+        #print(1, len(bound_rects_part))
         rects_sobel = []
         for i in range(len(bound_rects_part)):
             bound_rect = bound_rects_part[i]
@@ -88,7 +89,7 @@ class PlateLocate(object):
             bound_mat = src[y: y + height, x: x + width, :]
 
             self.sobelSecSearchPart(bound_mat, refpoint, rects_sobel)
-
+        #print(1.5, len(rects_sobel))
         for i in range(len(bound_rects)):
             bound_rect = bound_rects[i]
             refpoint = (bound_rect[0], bound_rect[1])
@@ -103,8 +104,9 @@ class PlateLocate(object):
             self.sobelSecSearch(bound_mat, refpoint, rects_sobel)
 
         src_b = self.sobelOper(src, 3, 10, 3)
-
+        #print(2, len(rects_sobel))
         self.deskew(src, src_b, rects_sobel, cand_plates)
+        #print(3, len(cand_plates))
         print("Sobel Locate Done")
 
     def sobelSecSearchPart(self, bound, refpoint, out):
@@ -122,6 +124,7 @@ class PlateLocate(object):
             for i in range(bound_threshold.shape[0]):
                 bound_threshold[i, posLeft] = 0
                 bound_threshold[i, posRight] = 0
+
         _, contours, _ = cv2.findContours(bound_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         for it in contours:
             mr = cv2.minAreaRect(it)
@@ -130,7 +133,7 @@ class PlateLocate(object):
                 out.append((tmp, mr[1], mr[2]))
 
     def sobelSecSearch(self, bound, refpoint, out):
-        bound_threshold = self.sobelOper(bound, self.m_GaussianBlurSize, self.m_MorphSizeWidth, self.m_MorphSizeHeight)
+        bound_threshold = self.sobelOper(bound, 3, 10, 3)
         # debug_show(bound_threshold, gray=True)
         _, contours, _ = cv2.findContours(bound_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -146,27 +149,14 @@ class PlateLocate(object):
         src_threshold = self.sobelOper(src, self.m_GaussianBlurSize, self.m_MorphSizeWidth, self.m_MorphSizeHeight)
         _, contours, _ = cv2.findContours(src_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        if self.m_debug:
-            src_copy = src.copy()
-            cv2.drawContours(src_copy, contours, -1, (0,255,0), 2)
-            imshow("fisrt_search", src_copy)
-
-        src_copy_2 = src.copy()
         for it in contours:
             mr = cv2.minAreaRect(it)
 
-
             if self.verifySizes(mr):
-                if self.m_debug:
-                    box = cv2.boxPoints(mr)
-                    box = np.int0(box)
-                    cv2.drawContours(src_copy_2,[box],0,(0,0,255),2)
                 safeBoundRect, flag = self.calcSafeRect(mr, src)
                 if not flag:
                     continue
                 out_rects.append(safeBoundRect)
-        if self.m_debug:
-            imshow("first_serach_res", src_copy_2)
 
         return out_rects
 
@@ -191,7 +181,7 @@ class PlateLocate(object):
             #cv2.drawContours(src_copy,[box],0,(0,0,255),2)
             #imshow('deskew', src_copy)
 
-            if roi_angle - m_angle < 0 and roi_angle + m_angle > 0:
+            if -m_angle < roi_angle < m_angle:
                 (x, y, w, h), flag = self.calcSafeRect(roi_rect, src)
                 if not flag:
                     continue
@@ -200,10 +190,10 @@ class PlateLocate(object):
 
                 roi_ref_center = (roi_rect[0][0] - x, roi_rect[0][1] - y)
 
-                if (roi_angle - 3 < 0 and roi_angle + 3 > 0) or roi_angle == 90 or roi_angle == -90:
+                if (-3 < roi_angle < 3) or roi_angle == 90 or roi_angle == -90:
                     deskew_mat = bound_mat
                 else:
-
+                    # TODO test
                     rotated_mat, flag = self.rotation(bound_mat, roi_rect_size, roi_ref_center,
                                                       roi_angle)
                     if not flag:
@@ -214,6 +204,7 @@ class PlateLocate(object):
                     if not flag:
                         continue
 
+                    #imshow("rotate", rotated_mat)
                     roi_slope, flag = self.isdeflection(rotated_mat_b, roi_angle)
                     if flag:
                         deskew_mat = self.affine(rotated_mat, roi_slope)
@@ -225,12 +216,12 @@ class PlateLocate(object):
                 if (deskew_mat.shape[1] / deskew_mat.shape[0]) > 2.3 and (
                     deskew_mat.shape[1] / deskew_mat.shape[0]) < 6:
                     if deskew_mat.shape[0] >= 36 or deskew_mat.shape[1] >= 136:
-                        plate_mat = cv2.resize(deskew_mat, (36, 136), interpolation=cv2.INTER_AREA)
+                        plate_mat = cv2.resize(deskew_mat, (136, 36), interpolation=cv2.INTER_AREA)
                     else:
-                        plate_mat = cv2.resize(deskew_mat, (36, 136), interpolation=cv2.INTER_CUBIC)
-                    plate = {}
-                    plate['pos'] = roi_rect
-                    plate['mat'] = plate_mat
+                        plate_mat = cv2.resize(deskew_mat, (136, 36), interpolation=cv2.INTER_CUBIC)
+                    plate = Plate()
+                    plate.plate_pos = roi_rect
+                    plate.plate_image = plate_mat
                     outRect.append(plate)
 
     def sobelOper(self, img, blursize, morphW, morphH):
@@ -241,7 +232,7 @@ class PlateLocate(object):
         else:
             gray = blur
 
-        x = cv2.Sobel(gray, cv2.CV_16S, 1, 0, 3)
+        x = cv2.Sobel(gray, cv2.CV_16S, 1, 0, ksize=3, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT)
         absX = cv2.convertScaleAbs(x)
         grad = cv2.addWeighted(absX, 1, 0, 0, 0)
 
@@ -303,7 +294,7 @@ class PlateLocate(object):
             return [x, y, w, h]
         '''
         box = cv2.boxPoints(roi)
-        box = np.int0(box)
+        #box = np.int0(box)
         x, y, w, h = cv2.boundingRect(box)
 
         src_h, src_w, _ = src.shape
@@ -369,7 +360,7 @@ class PlateLocate(object):
             dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff / 2, 0], [xiff / 2, height - 1]])
         else:
             plTri = np.float32([[xiff, 0], [width - 1, 0], [0, height - 1]])
-            dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff + xiff / 2, 0], [xiff / 2, height - 1]])
+            dstTri = np.float32([[xiff / 2, 0], [width - 1 - xiff / 2, 0], [xiff / 2, height - 1]])
         warp_mat = cv2.getAffineTransform(plTri, dstTri)
 
         if in_mat.shape[0] > 36 or in_mat.shape[1] > 136:
@@ -411,39 +402,34 @@ class PlateLocate(object):
         input_gray = cv2.cvtColor(in_img, cv2.COLOR_BGR2GRAY)
         w = in_img.shape[1]
         h = in_img.shape[0]
-        tmp_mat = in_img[int(w * 0.15):int(w * 0.7), int(h * 0.1):int(h * 0.7)]
+        tmp_mat = in_img[int(h * 0.1):int(h * 0.85), int(w * 0.15):int(w * 0.85)]
 
         plateType = getPlateType(tmp_mat, True)
 
         if plateType == 'BLUE':
-            img_threshold = input_gray.copy()
-            tmp = in_img[int(w * 0.15):int(w * 0.7), int(h * 0.1):int(h * 0.7)]
+            tmp = in_img[int(h * 0.1):int(h * 0.85), int(w * 0.15):int(w * 0.85)]
             threadHoldV = ThresholdOtsu(tmp)
             _, img_threshold = cv2.threshold(input_gray, threadHoldV, 255, cv2.THRESH_BINARY)
         elif plateType == 'YELLOW':
-            img_threshold = input_gray.copy()
-            tmp = in_img[int(w * 0.15):int(w * 0.7), int(h * 0.1):int(h * 0.7)]
+            tmp = in_img[int(h * 0.1):int(h * 0.85), int(w * 0.15):int(w * 0.85)]
             threadHoldV = ThresholdOtsu(tmp)
-            _, img_threshold = cv2.threshold(input_gray, hreadHoldV, 255, cv2.THRESH_BINARY_INV)
+            _, img_threshold = cv2.threshold(input_gray, threadHoldV, 255, cv2.THRESH_BINARY_INV)
         else:
             _, img_threshold = cv2.threshold(input_gray, 10, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)
-
-        posLeft = 0
-        posRight = 0
 
         top, bottom = clearLiuDing(img_threshold, 0, img_threshold.shape[0] - 1)
         posLeft, posRight, flag = bFindLeftRightBound1(img_threshold)
 
         if flag:
-            in_img = in_img[int(posLeft):int(w - posLeft), int(top):int(bottom - top)]
+            in_img = in_img[int(top):int(bottom), int(posLeft):int(w)]
 
-    def plateColorLocate(self, src, cand):
+    def plateColorLocate(self, src, cand, index=0):
         rects_blue = []
         rects_yellow = []
         print("Doing Color Locate")
         src_b = self.colorSearch(src, Color.BLUE, rects_blue)
         self.deskew(src, src_b, rects_blue, cand)
-        print(len(rects_blue))
+
         src_b = self.colorSearch(src, Color.YELLOW, rects_yellow)
         self.deskew(src, src_b, rects_yellow, cand)
         print("Color Locate Done")
@@ -464,7 +450,7 @@ class PlateLocate(object):
 
         if self.m_debug:
             imshow('match_gray', match_gray)
-            imwrite("resources/image/tmp/", "match_gray.jpg", match_gray)
+            #imwrite("resources/image/tmp/", "match_gray.jpg", match_gray)
 
         _, src_threshold = cv2.threshold(match_gray, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)
 
@@ -473,7 +459,7 @@ class PlateLocate(object):
 
         if self.m_debug:
             imshow('color', src_threshold)
-            imwrite("resources/image/tmp/", "color.jpg", src_threshold)
+            #imwrite("resources/image/tmp/", "color.jpg", src_threshold)
 
         out = src_threshold.copy()
 

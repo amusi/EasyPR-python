@@ -4,5 +4,6 @@ class CharsIdentify(object):
     def __init__(self, model_path):
         pass
 
-    def predict(self):
+    @classmethod
+    def identify(cls, input):
         pass

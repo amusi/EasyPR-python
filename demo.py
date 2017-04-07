@@ -8,7 +8,7 @@ main_menu = (
     '2. 准确度测试;(Invalid)\n' +
     '3. SVM训练;(Invalid)\n' +
     '4. CNN相关;\n' +
-    '-'*8 + '\n'
+    '-'*8
 )
 
 test_menu = (

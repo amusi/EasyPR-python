@@ -4,6 +4,8 @@ import numpy as np
 from core.plate_locate import PlateLocate
 from core.plate_detect import PlateDetect
 from core.chars_segment import CharsSegment
+from core.chars_recognise import CharsRecognise
+from core.plate_judge import PlateJudge
 
 from train.cnn_train import Lenet
 from train.dataset import DataSet
@@ -30,7 +32,7 @@ def test_plate_locate():
 
 def test_plate_judge():
     print("Testing Plate Judge")
-    # try:
+
     file = "resources/image/test.jpg"
 
     src = cv2.imread(file)
@@ -42,10 +44,11 @@ def test_plate_judge():
 
     if plate.plateLocate(src, result) == 0:
         for res in result:
-            imshow("plate locate", res)
+            imshow("plate judge", res)
 
-    # except:
-    #   traceback.print_exc()
+    judge_result = []
+    PlateJudge.plateJudge(result, judge_result)
+
 
 def test_plate_detect():
     print("Testing Plate Detect")
@@ -60,7 +63,7 @@ def test_plate_detect():
 
     if pd.plateDetect(src, result):
         for res in result:
-            imshow("plate locate", res)
+            imshow("plate detect", res.plate_image)
 
 
 
@@ -86,15 +89,35 @@ def test_chars_identify():
     src = cv2.imread(file)
     imshow("src", src)
     result = []
-    license = []
+    plate_license = []
     plate = CharsSegment()
 
     if plate.charsSegment(src, result) == 0:
         for i in range(len(result)):
             license.append()
 
+    print("Plate License: ", "苏E771H6")
+    print("Plate Identify: ", plate_license)
+    if (plate_license == "苏E771H6"):
+        print("Identify Correct")
+    else:
+        print("Identify Not Correct")
+
 def test_chars_recognise():
-    pass
+    print("Testing Chars Segment")
+
+    file = "resources/image/chars_recognise.jpg"
+
+    src = cv2.imread(file)
+    imshow("src", src)
+
+    plate_license = ""
+
+    cr = CharsRecognise()
+
+    if cr.charsRecognise(src, plate_license):
+        print("Chars Recognise: ", plate_license)
+
 
 def test_plate_recogize():
     pass
