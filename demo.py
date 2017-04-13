@@ -15,14 +15,12 @@ test_menu = (
     '-'*8 + '\n' +
     '功能测试:\n' +
     '1. test plate_locate(车牌定位);\n' +
-    '2. test plate_judge(车牌判断);\n' +
-    '3. test plate_detect(车牌检测);\n' +
+    '2. test plate_judge(车牌判断);(Invalid)\n' +
+    '3. test plate_detect(车牌检测);(Invalid)\n' +
     '4. test chars_segment(字符分隔);\n' +
     '5. test chars_identify(字符鉴别);\n' +
     '6. test chars_recognise(字符识别);\n' +
-    '7. test plate_recognize(车牌识别);\n' +
-    '8. test all(测试全部);\n' +
-    '9. 返回;\n' +
+    '7. test plate_recognize(车牌识别);(Invalid)\n' +
     '-'*8
 )
 
@@ -38,8 +36,7 @@ cnn_menu = (
     '-'*8 + '\n' +
     'cnn相关:\n' +
     '1. cnn训练;\n' +
-    '2. cnn测试(单张);\n' +
-    '3. cnn测试(测试集);\n' +
+    '2. cnn测试(测试集);\n' +
     '-'*8
 )
 
@@ -57,13 +54,14 @@ def test_main():
         test_op[select]()
 
 
-
 def test_accuary():
     print(accuary_menu)
     pass
 
+
 def svm_train():
     pass
+
 
 def cnn_rel():
     print(cnn_menu)
@@ -71,8 +69,6 @@ def cnn_rel():
     if select == '1':
         main()
     elif select == '2':
-        test_cnn(label=0)
-    elif select == '3':
         test_cnn_val()
     else:
         print("Error choice")

@@ -1,18 +1,25 @@
 from .chars_segment import CharsSegment
 from .chars_identify import CharsIdentify
 
+from util.read_etc import index2str
+
+import numpy as np
+
 class CharsRecognise(object):
     def __init__(self):
         self.charsSegment = CharsSegment()
 
-    def charsRecognise(self, plate, plate_license):
+    def charsRecognise(self, plate):
         chars = []
         result = self.charsSegment.charsSegment(plate, chars)
+
+        temp = []
+        plate_license = ""
+
         if result == 0:
-            for c in chars:
-                plate_license += CharsIdentify.identify(c)
+            temp = CharsIdentify().identify(np.array(chars)[..., None])
 
-        if len(plate_license) < 7:
-            return -1
+        for index in temp:
+            plate_license += index2str[index]
 
-        return result
+        return plate_license

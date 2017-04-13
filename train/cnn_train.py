@@ -1,93 +1,59 @@
-import tensorflow as tf
-
-from .layer import *
-from .dataset import DataSet
-
-import os
 import datetime
-import time
+import os
+
+from core.base import Singleton
+from train.net.layer import *
+from .dataset import DataSet
+from .net.Lenet import Lenet
 
 
-class Lenet(object):
+class Train(object):
+
+    __metaclass__ = Singleton
+
     def __init__(self, params):
-        self.batch_size = params['batch_size']
-        self.image_size = params['image_size']
-        self.prob = params['prob']
         self.learning_rate = params['lr']
-        self.max_steps = params['max_steps']
+        self.number_epoch = params['number_epoch']
+        self.epoch_length = params['epoch_length']
         self.log_dir = params['log_dir']
-        print("bs: {}, img_size: {}, prob: {}, lr: {}, max_steps: {}".format(
-            self.batch_size, self.image_size, self.prob, self.learning_rate, self.max_steps
+        print("lr: {}, number_epochs: {}, epoch_length: {}, max_steps: {}".format(
+            self.learning_rate, self.number_epoch, self.epoch_length, int(self.epoch_length * self.number_epoch)
         ))
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        self.num_classes = 65
+        self.model = None
 
-        self.x = None
-        self.y = None
-        self.keep_prob = None
-
-        self.pred = None
+        self.pred_labels = None
         self.loss = None
         self.total_loss = None
-
-        self.global_step = tf.Variable(0)
-        self.saver = tf.train.Saver(max_to_keep=5)
+        self.l2_loss = None
 
         self.sess = None
 
-    def compile(self):
-        self.x = tf.placeholder(tf.float32, (self.batch_size, self.image_size, self.image_size, 1))
-        self.y = tf.placeholder(tf.int64, shape=(self.batch_size,))
-        self.keep_prob = tf.placeholder(tf.float32)
+        self.weights = []
+        self.biases = []
 
-        conv1_weights = weight_variable([5, 5, 1, 32])  # 5x5 filter, depth 32.
-        conv1_biases = bias_variable([32])
-        conv2_weights = weight_variable([5, 5, 32, 64])
-        conv2_biases = bias_variable([64])
+    def compile(self, model):
+        self.model = model
 
-        fc1_weights = weight_variable([25 * 64, 512])
-        fc1_biases = bias_variable([512])
-        fc2_weights = weight_variable([512, self.num_classes])
-        fc2_biases = bias_variable([self.num_classes])
-
-        def model(data):
-            conv1 = conv2d(data, conv1_weights)
-            relu1 = tf.nn.relu(tf.nn.bias_add(conv1, conv1_biases))
-            pool1 = max_pool(relu1)
-
-            conv2 = conv2d(pool1, conv2_weights)
-            relu2 = tf.nn.relu(tf.nn.bias_add(conv2, conv2_biases))
-            pool2 = max_pool(relu2)
-
-            pool_shape = pool2.get_shape().as_list()
-            reshape = tf.reshape(pool2, [pool_shape[0], pool_shape[1] * pool_shape[2] * pool_shape[3]])
-
-            hidden = tf.nn.relu(tf.matmul(reshape, fc1_weights) + fc1_biases)
-
-            hidden = tf.nn.dropout(hidden, self.keep_prob)
-
-            return tf.matmul(hidden, fc2_weights) + fc2_biases
-
-        logits = model(self.x)
+        self.pred_logits = self.model.pred_logits
+        self.pred_labels = self.model.pred_labels
         self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=logits, labels=self.y))
+            logits=self.pred_logits, labels=self.model.y))
+        tf.summary.scalar('loss', self.loss)
 
-        regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) +
-                        tf.nn.l2_loss(fc2_weights) + tf.nn.l2_loss(fc2_biases))
+        self.total_loss = self.loss + 5e-4 * self.model.l2_loss
 
-        self.total_loss = self.loss + 5e-4 * regularizers
-        self.pred = tf.argmax(logits, 1)
-        correct_pred = tf.equal(self.pred, self.y)
+        correct_pred = tf.equal(self.pred_labels, self.model.y)
         self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-
+        tf.summary.scalar('accuracy', self.accuracy)
         self.__add_optimal()
 
     def __add_optimal(self):
         optimizer = tf.train.AdadeltaOptimizer(self.learning_rate)
-        train_op = optimizer.minimize(self.total_loss, global_step=self.global_step)
+        train_op = optimizer.minimize(self.total_loss)
 
         self.train_op = train_op
 
@@ -95,67 +61,61 @@ class Lenet(object):
         if self.sess is None:
             self.sess = tf.Session()
 
-        self.sess.run(tf.global_variables_initializer())
-        train_writer = tf.summary.FileWriter(self.log_dir + "train/summary/", self.sess.graph)
+        merged = tf.summary.merge_all()
+        train_writer = tf.summary.FileWriter(self.log_dir + "/summary/train", self.sess.graph)
+        test_writer = tf.summary.FileWriter(self.log_dir + "/summary/test")
         model_dir = self.log_dir + 'models/'
+
+        saver = tf.train.Saver(max_to_keep=5)
+        self.sess.run(tf.global_variables_initializer())
 
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
 
-        ckpt = tf.train.get_checkpoint_state(model_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
-            print("Model restored...", ckpt.model_checkpoint_path)
-
-        for step in range(int(self.max_steps)):
+        for step in range(int(self.epoch_length * self.number_epoch)):
 
             train_x, train_y = train_dataset.batch()
-            feed_dict = {self.x: train_x, self.y: train_y, self.keep_prob: 0.5}
+            feed_dict = {self.model.x: train_x, self.model.y: train_y, self.model.keep_prob: 0.5}
             self.sess.run(self.train_op, feed_dict=feed_dict)
 
             if step % 10 == 0:
-                train_loss, acc = self.sess.run([self.loss, self.accuracy], feed_dict=feed_dict)
-                print("Step: %d, Train_loss: %g, acc: %g" % (step, train_loss, acc))
+                feed_dict = {self.model.x: train_x, self.model.y: train_y, self.model.keep_prob: 1}
+                summary, train_loss, acc = self.sess.run([merged, self.loss, self.accuracy], feed_dict=feed_dict)
+                print("Step: %d / %d (epoch: %d / %d), Train_loss: %g, acc: %g" % (step % self.epoch_length,
+                                            self.epoch_length, step // self.epoch_length,
+                                            self.number_epoch, train_loss, acc))
+                train_writer.add_summary(summary, step)
 
             if step % 100 == 0:
                 val_x, val_y = val_dataset.batch()
-                feed_dict = {self.x: val_x, self.y: val_y, self.keep_prob: 1}
-                valid_loss, acc = self.sess.run([self.loss, self.accuracy], feed_dict=feed_dict)
+                feed_dict = {self.model.x: train_x, self.model.y: train_y, self.model.keep_prob: 1}
+                summary, valid_loss, acc = self.sess.run([merged, self.loss, self.accuracy], feed_dict=feed_dict)
                 print("%s ---> Validation_loss: %g, acc: %g" % (datetime.datetime.now(), valid_loss, acc))
+                test_writer.add_summary(summary, step)
 
-            if step % 5000 == 0:
-                print('Saving checkpoint: ', step)
-                self.saver.save(self.sess, model_dir + "model.ckpt", step)
+            if step % self.epoch_length == self.epoch_length - 1:
+                now_epoch = step // self.epoch_length
+                print('Saving checkpoint: ', now_epoch)
+                #saver.save(self.sess, model_dir + "model.ckpt", now_epoch)
 
         train_writer.close()
-
-    def predict(self, test_images):
-
-        assert(test_images.ndim == 3 or test_images.ndim == 4)
-        if test_images.ndim == 3:
-            test_images = test_images[None]
-
-        assert(test_images.ndim == 4)
-
-        if self.sess is None:
-            self.sess = tf.Session()
-            self.sess.run(tf.global_variables_initializer())
-
-            model_dir = self.log_dir + 'models/'
-            ckpt = tf.train.get_checkpoint_state(model_dir)
-            if ckpt and ckpt.model_checkpoint_path:
-                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
-                print("Model restored...", ckpt.model_checkpoint_path)
-
-        starttime = time.time()
-        pred = self.sess.run(self.pred, feed_dict={self.x: test_images,
-                                                              self.keep_prob: 1.0})
-        endtime = time.time()
-        print('Predict done: time {:.4f} sec'.format(endtime - starttime))
-        return pred, endtime - starttime
+        test_writer.close()
+        self.close()
 
     def close(self):
         self.sess.close()
+
+def eval_model(nodes, samples_feed, eval_sess=None, model_dir=None):
+
+    if eval_sess is None:
+        eval_sess = tf.Session()
+        ckpt = tf.train.get_checkpoint_state(model_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            saver = tf.train.Saver()
+            print("Model restored...", ckpt.model_checkpoint_path)
+            saver.restore(eval_sess, ckpt.model_checkpoint_path)
+
+    return eval_sess.run(nodes, samples_feed)
 
 def main():
     batch_size = 32
@@ -167,19 +127,19 @@ def main():
     }
     train_dataset_reader = DataSet(dataset_params)
     dataset_params['labels_path'] = 'resources/train_data/chars_list_val.pickle'
-    #dataset_params['batch_size'] = -1
+    dataset_params['batch_size'] = -1
     val_dataset_reader = DataSet(dataset_params)
 
     params = {
-        'image_size': 20,
-        'batch_size': batch_size,
-        'prob': 0.5,
         'lr': 0.01,
-        'max_steps': train_dataset_reader.num_batch_per_epoch * 20,
+        'number_epoch': 0.001,
+        'epoch_length': train_dataset_reader.record_number,
         'log_dir': 'train/model/chars/'
     }
 
-    model = Lenet(params)
+    model = Lenet()
     model.compile()
-    model.train(train_dataset_reader, val_dataset_reader)
+    train = Train(params)
+    train.compile(model)
+    train.train(train_dataset_reader, val_dataset_reader)
 
