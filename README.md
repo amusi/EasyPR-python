@@ -13,11 +13,15 @@ EasyPR-python by fh
 ![cnn_performance](pic/cnn_res_acc.png)
 ## TODO
 - [ ] plate judge
-...
-Many things to do
 
 ## Done
 - [x] plate locate ( need test )
 - [x] plate segment
 - [x] char identify ( cnn 98.86%)
 
+## How to train cnn
+unzip `resources/train_data/chars.7z`
+
+`python demo.py`
+## Demo
+`python demo.py`
