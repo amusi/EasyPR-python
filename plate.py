@@ -8,7 +8,7 @@ from core.chars_recognise import CharsRecognise
 from core.chars_identify import CharsIdentify
 from core.plate_judge import PlateJudge
 
-from train.net.Lenet import Lenet
+from train.net.lenet import Lenet
 from train.cnn_train import eval_model
 from train.dataset import DataSet
 
@@ -31,7 +31,6 @@ def test_plate_locate():
         for res in result:
             imshow("plate locate", res)
 
-
 def test_plate_judge():
     print("Testing Plate Judge")
 
@@ -47,9 +46,9 @@ def test_plate_judge():
     if plate.plateLocate(src, result) == 0:
         for res in result:
             imshow("plate judge", res)
+            break
 
-    judge_result = []
-    PlateJudge.plateJudge(result, judge_result)
+    judge_result = PlateJudge().judge(result)
 
 def test_plate_detect():
     print("Testing Plate Detect")
@@ -124,7 +123,6 @@ def test_plate_recogize():
     pass
 
 def test_cnn_val():
-    batch_size = 1
 
     dataset_params = {
         'batch_size': -1,
@@ -149,3 +147,26 @@ def test_cnn_val():
 
     print("Accuary: {:.2f}%".format(acc*100))
 
+def test_judge_val():
+
+    dataset_params = {
+        'batch_size': -1,
+        'path': 'resources/train_data/whether_cars',
+        'labels_path': 'resources/train_data/whether_list_val.pickle',
+        'thread_num': 3
+    }
+    val_dataset_reader = DataSet(dataset_params)
+
+    model = Lenet()
+    model.compile()
+
+    image, label = val_dataset_reader.batch()
+    print("Total dataset number: ", val_dataset_reader.record_number)
+
+    pred, acc = eval_model([model.pred_labels, model.accuracy],
+                           {model.x: image, model.y: label, model.keep_prob: 1},
+                           model_dir="train/model/whether_car/models/")
+
+    print("Label: {}({}), Pred: {}({})".format(label[0], index2str[label[0]], pred[0], index2str[pred[0]]))
+
+    print("Accuary: {:.2f}%".format(acc * 100))

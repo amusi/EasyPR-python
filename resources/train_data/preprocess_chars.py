@@ -4,8 +4,6 @@ from six.moves import cPickle as pickle
 import random
 from util.read_etc import *
 
-chars_dataset = {}
-
 total_list = []
 
 labels = os.listdir('chars/')

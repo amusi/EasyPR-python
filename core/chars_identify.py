@@ -1,7 +1,7 @@
 from .base import Singleton
 
 from train.cnn_train import eval_model
-from train.net.Lenet import Lenet
+from train.net.lenet import Lenet
 
 class CharsIdentify(Singleton):
 

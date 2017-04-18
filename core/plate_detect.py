@@ -26,7 +26,7 @@ class PlateDetect(object):
 
         self.m_plateLocate.plateColorLocate(src, color_plates, index)
 
-        PlateJudge.plateJudge(color_plates, color_result_plates)
+        color_result_plates = PlateJudge().judge(color_plates)
 
         for plate in color_result_plates:
             plate.plate_type = "COLOR"
@@ -34,7 +34,7 @@ class PlateDetect(object):
 
         self.m_plateLocate.plateSobelLocate(src, sobel_plates, index)
 
-        PlateJudge.plateJudge(sobel_plates, sobel_result_plates)
+        sobel_result_plates = PlateJudge().judge(sobel_plates)
 
         for plate in color_result_plates:
             plate.bColored = False

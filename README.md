@@ -5,6 +5,13 @@ EasyPR-python by fh
 * opencv 3.1
 * tensorflow 1.0
 
+## Introduction
+Use easypr's way to do locate and segment.
+
+Use Lenet to do chars identify.
+
+Use a cnn network to judge whether a car.
+
 ## Compare
 ### easypr-1.4
 ![performance](pic/easypr_1.4.png)
@@ -19,9 +26,12 @@ EasyPR-python by fh
 - [x] plate segment
 - [x] char identify ( cnn 98.86%)
 
-## How to train cnn
+## How to train identify
 unzip `resources/train_data/chars.7z`
 
 `python demo.py`
+
+(There is already a trained checkpoint in `train/model/chars/models`)
+
 ## Demo
 `python demo.py`

@@ -1,12 +1,13 @@
 from plate import *
-from train.cnn_train import main
+from train.cnn_train import identify_train
+from train.judge_train import judge_train
 
 main_menu = (
     '-'*8 + '\n' +
     '选择测试:\n' +
     '1. 功能测试;\n' +
     '2. 准确度测试;(Invalid)\n' +
-    '3. SVM训练;(Invalid)\n' +
+    '3. JUDGE训练;\n' +
     '4. CNN相关;\n' +
     '-'*8
 )
@@ -24,7 +25,7 @@ test_menu = (
     '-'*8
 )
 
-accuary_menu = (
+batch_menu = (
     '-'*8 + '\n' +
     '批量测试:\n' +
     '1. 普通情况测试;\n' +
@@ -37,6 +38,14 @@ cnn_menu = (
     'cnn相关:\n' +
     '1. cnn训练;\n' +
     '2. cnn测试(测试集);\n' +
+    '-'*8
+)
+
+judge_menu = (
+    '-'*8 + '\n' +
+    'judge相关:\n' +
+    '1. judge训练;\n' +
+    '2. judge测试(测试集);\n' +
     '-'*8
 )
 
@@ -54,20 +63,29 @@ def test_main():
         test_op[select]()
 
 
-def test_accuary():
-    print(accuary_menu)
-    pass
+def test_batch():
+    while (1):
+        print(batch_menu)
+        select = input()
+        test_op[select]()
 
 
-def svm_train():
-    pass
+def judge_rel():
+    print(judge_menu)
+    select = input()
+    if select == '1':
+        judge_train()
+    elif select == '2':
+        test_judge_val()
+    else:
+        print("Error choice")
 
 
 def cnn_rel():
     print(cnn_menu)
     select = input()
     if select == '1':
-        main()
+        identify_train()
     elif select == '2':
         test_cnn_val()
     else:
@@ -75,8 +93,8 @@ def cnn_rel():
 
 main_op = {
     '1': test_main,
-    '2': test_accuary,
-    '3': svm_train,
+    '2': test_batch,
+    '3': judge_rel,
     '4': cnn_rel
 }
 

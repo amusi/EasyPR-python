@@ -4,7 +4,7 @@ import os
 from core.base import Singleton
 from train.net.layer import *
 from .dataset import DataSet
-from .net.Lenet import Lenet
+from .net.lenet import Lenet
 
 
 class Train(object):
@@ -88,7 +88,7 @@ class Train(object):
 
             if step % 100 == 0:
                 val_x, val_y = val_dataset.batch()
-                feed_dict = {self.model.x: train_x, self.model.y: train_y, self.model.keep_prob: 1}
+                feed_dict = {self.model.x: val_x, self.model.y: val_y, self.model.keep_prob: 1}
                 summary, valid_loss, acc = self.sess.run([merged, self.loss, self.accuracy], feed_dict=feed_dict)
                 print("%s ---> Validation_loss: %g, acc: %g" % (datetime.datetime.now(), valid_loss, acc))
                 test_writer.add_summary(summary, step)
@@ -96,7 +96,7 @@ class Train(object):
             if step % self.epoch_length == self.epoch_length - 1:
                 now_epoch = step // self.epoch_length
                 print('Saving checkpoint: ', now_epoch)
-                #saver.save(self.sess, model_dir + "model.ckpt", now_epoch)
+                saver.save(self.sess, model_dir + "model.ckpt", now_epoch)
 
         train_writer.close()
         test_writer.close()
@@ -117,7 +117,7 @@ def eval_model(nodes, samples_feed, eval_sess=None, model_dir=None):
 
     return eval_sess.run(nodes, samples_feed)
 
-def main():
+def identify_train():
     batch_size = 32
     dataset_params = {
         'batch_size': batch_size,
@@ -132,7 +132,7 @@ def main():
 
     params = {
         'lr': 0.01,
-        'number_epoch': 0.001,
+        'number_epoch': 30,
         'epoch_length': train_dataset_reader.record_number,
         'log_dir': 'train/model/chars/'
     }
