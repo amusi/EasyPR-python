@@ -16,29 +16,35 @@ class PlateDetect(object):
     def setPDLifemode(self, param):
         self.m_plateLocate.setLifemode(param)
 
-    def plateDetect(self, src, res, showDetectArea=True, index=0):
+    def plateDetect(self, src, res, index=0):
         color_plates = []
         sobel_plates = []
         color_result_plates = []
         sobel_result_plates = []
 
-        color_find_max = self.m_maxPlates
-
         self.m_plateLocate.plateColorLocate(src, color_plates, index)
 
-        color_result_plates = PlateJudge().judge(color_plates)
+        for plate in color_plates:
+            color_result_plates.append(plate.plate_image)
+
+        if len(color_result_plates) != 0:
+            color_result_plates = PlateJudge().judge(np.array(color_result_plates))
 
         for plate in color_result_plates:
-            plate.plate_type = "COLOR"
             res.append(plate)
+
+        if len(res) > self.m_maxPlates:
+            return 0
 
         self.m_plateLocate.plateSobelLocate(src, sobel_plates, index)
 
-        sobel_result_plates = PlateJudge().judge(sobel_plates)
+        for plate in sobel_plates:
+            sobel_result_plates.append(plate.plate_image)
 
-        for plate in color_result_plates:
-            plate.bColored = False
-            plate.plate_type = "SOBEL"
+        if len(sobel_result_plates) != 0:
+            sobel_result_plates = PlateJudge().judge(np.array(sobel_result_plates))
+
+        for plate in sobel_result_plates:
             res.append(plate)
 
         return 0

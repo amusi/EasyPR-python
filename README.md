@@ -1,12 +1,14 @@
 # EasyPR-python
 EasyPR-python by fh
+
+slow, some mistake
 ## Requirements
 * python 3.5
 * opencv 3.1
 * tensorflow 1.0
 
 ## Introduction
-Use easypr's way to do locate and segment.
+Use easypr-1.4's way to do locate and segment.
 
 Use Lenet to do chars identify.
 
@@ -23,8 +25,9 @@ Use a cnn network to judge whether a car.
 
 ## Done
 - [x] plate locate ( need test )
+- [x] plate judge (cnn 98.79%)
 - [x] plate segment
-- [x] char identify ( cnn 98.86%)
+- [x] char identify ( cnn 99.63%)
 
 ## How to train identify
 unzip `resources/train_data/chars.7z`

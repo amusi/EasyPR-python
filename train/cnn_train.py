@@ -112,7 +112,7 @@ def eval_model(nodes, samples_feed, eval_sess=None, model_dir=None):
         ckpt = tf.train.get_checkpoint_state(model_dir)
         if ckpt and ckpt.model_checkpoint_path:
             saver = tf.train.Saver()
-            print("Model restored...", ckpt.model_checkpoint_path)
+            #print("Model restored...", ckpt.model_checkpoint_path)
             saver.restore(eval_sess, ckpt.model_checkpoint_path)
 
     return eval_sess.run(nodes, samples_feed)

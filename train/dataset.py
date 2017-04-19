@@ -17,6 +17,10 @@ class DataSet(object):
         self.label_path = str(dataset_params['labels_path'])
         self.batch_size = int(dataset_params['batch_size'])
         self.thread_num = int(dataset_params['thread_num'])
+        self.gray = False
+
+        if 'gray' in dataset_params:
+            self.gray = dataset_params['gray']
 
         #record and image_label queue
         self.record_queue = Queue(maxsize=10000)
@@ -55,14 +59,17 @@ class DataSet(object):
                                                 self.record_list[self.record_point]['label']])
             self.record_point += 1
 
-    def record_process(self, record):
+    def record_process(self, record, gray=False):
         """record process 
         Args: record 
         Returns:
           image: 3-D ndarray
           labels: 2-D list
         """
-        image = cv2.imdecode(np.fromfile(record[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)[..., None]
+        if gray:
+            image = cv2.imdecode(np.fromfile(record[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)[..., None]
+        else:
+            image = cv2.imdecode(np.fromfile(record[0], dtype=np.uint8), cv2.IMREAD_COLOR)
         #image = cv2.imread(record[0], cv2.IMREAD_GRAYSCALE)[..., None]
         return [image, record[1]]
 
@@ -71,7 +78,7 @@ class DataSet(object):
         """
         while True:
             item = self.record_queue.get()
-            out = self.record_process(item)
+            out = self.record_process(item, self.gray)
             self.image_label_queue.put(out)
 
     def batch(self):

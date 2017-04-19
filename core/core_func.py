@@ -148,7 +148,8 @@ def bFindLeftRightBound1(bound_threshold):
             posLeft = i
             break
     span = bound_threshold.shape[0] * 0.2
-
+    posLeft = 0
+    posRight = 0
     for i in range(bound_threshold.shape[1] - 1, int(span), -2):
         whiteCnt = 0
         for k in range(bound_threshold.shape[0]):

@@ -17,7 +17,7 @@ class PlateLocate(object):
         self.m_verifyMax = 24
         self.m_angle = 60
 
-        self.m_debug = True
+        self.m_debug = False
 
     def setLifemode(self, param):
         if param:
@@ -52,7 +52,7 @@ class PlateLocate(object):
         return 0
 
     def plateSobelLocate(self, src, cand_plates, index=0):
-        print("Doing Sobel Locate")
+        #print("Doing Sobel Locate")
         bound_rects = self.sobelFrtSearch(src)
         bound_rects_part = []
 
@@ -107,7 +107,7 @@ class PlateLocate(object):
         #print(2, len(rects_sobel))
         self.deskew(src, src_b, rects_sobel, cand_plates)
         #print(3, len(cand_plates))
-        print("Sobel Locate Done")
+        #print("Sobel Locate Done")
 
     def sobelSecSearchPart(self, bound, refpoint, out):
         bound_threshold = self.sobelOperT(bound, 3, 6, 2)
@@ -331,14 +331,6 @@ class PlateLocate(object):
         if width != in_img.shape[1] and height != in_img.shape[0]:
             return in_img, False
 
-        if len(in_img.shape) == 3:
-            img_roi = in_large[y:y + height, x:x + width, :]
-        else:
-            img_roi = in_large[y:y + height, x:x + width]
-
-        cv2.addWeighted(img_roi, 0, in_img, 1, 0, img_roi)
-
-        center_diff = (in_img.shape[1] / 2, in_img.shape[0] / 2)
         new_center = (in_large.shape[1] / 2, in_large.shape[0] / 2)
 
         rot_mat = cv2.getRotationMatrix2D(new_center, angle, 1)
@@ -426,13 +418,13 @@ class PlateLocate(object):
     def plateColorLocate(self, src, cand, index=0):
         rects_blue = []
         rects_yellow = []
-        print("Doing Color Locate")
+        #print("Doing Color Locate")
         src_b = self.colorSearch(src, Color.BLUE, rects_blue)
         self.deskew(src, src_b, rects_blue, cand)
 
         src_b = self.colorSearch(src, Color.YELLOW, rects_yellow)
         self.deskew(src, src_b, rects_yellow, cand)
-        print("Color Locate Done")
+        #print("Color Locate Done")
         return 0
 
     def colorSearch(self, src, color, out_rect):

@@ -31,17 +31,17 @@ class Judgenet(Singleton):
         self.weights = []
         self.biases = []
 
-        input = ImageLayer(36, 136, 1)
+        input = ImageLayer(36, 136, 3)
         label = LabelLayer()
 
-        convpools1 = ConvPoolLayer(input, 5, 5, 48, 2, 2, layer_id=1)
+        convpools1 = ConvPoolLayer(input, 5, 5, 16, 2, 2, layer_id=1)
 
-        convpools2 = ConvPoolLayer(convpools1, 5, 5, 128, 2, 2, layer_id=2)
+        convpools2 = ConvPoolLayer(convpools1, 5, 5, 32, 2, 2, layer_id=2)
 
         dp = DropoutLayer(convpools2, self.keep_prob)
 
         flatten = FlattenLayer(dp)
-        ip1 = DenseLayer(flatten, 400, layer_name="DENSE1")
+        ip1 = DenseLayer(flatten, 256, layer_name="DENSE1")
         self.weights += ip1.weights
         self.biases += ip1.biases
         ip1_relu = ActivationLayer(ip1)
